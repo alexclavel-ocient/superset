@@ -1,5 +1,4 @@
-#
-# Licensed to the Apache Software Foundation (ASF) under one or more
+censed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
 # The ASF licenses this file to You under the Apache License, Version 2.0
@@ -14,6 +13,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+######################################################################
+# PY stage that simply does a pip install on our requirements
+######################################################################
+ARG PY_VER=3.8.13
+FROM python:${PY_VER} AS superset-py
+
+RUN mkdir /app \
+        && apt-get update -y \
+        && apt-get install -y --no-install-recommends \
+            build-essential \
+            default-libmysqlclient-dev \
+            libpq-dev \
+            libsasl2-dev \
+            libecpg-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+# First, we just wanna install requirements, which will allow us to utilize the cache
+# in order to only build if and only if requirements change
+COPY ./requirements/*.txt  /app/requirements/
+COPY setup.py MANIFEST.in README.md /app/
+COPY superset-frontend/package.json /app/superset-frontend/
+
+## Install the pyocient sqlalchemy bindings
+## TODO publish package to pypi
+COPY ./xgsrc/sqlalchemy_ocient /app/sqlalchemy_ocient
+COPY ./xgsrc/pyocient /app/pyocient
+
+## Install the Ocient database engine
+## TODO commit the engine to the superset repo
+COPY ./sales/superset-ocient/ocient.py /app/superset/db_engine_specs/ocient.py
+
+RUN cd /app \
+    && mkdir -p superset/static \
+    && touch superset/static/version_info.json \
+    && pip install --no-cache -r requirements/local.txt
+
 
 ######################################################################
 # Node stage to deal with static asset construction
@@ -80,6 +116,16 @@ COPY --from=superset-node /app/superset/static/assets /app/superset/static/asset
 
 ## Lastly, let's install superset itself
 COPY superset /app/superset
+
+## Install the pyocient sqlalchemy bindings
+## TODO publish package to pypi
+COPY --from=superset-py /app/sqlalchemy_ocient /app/sqlalchemy_ocient
+COPY --from=superset-py /app/pyocient /app/pyocient
+
+## Install the Ocient database engine
+## TODO commit the engine to the superset repo
+COPY --from=superset-py /app/superset/db_engine_specs/ocient.py /app/superset/db_engine_specs/ocient.py
+
 COPY setup.py MANIFEST.in README.md /app/
 RUN cd /app \
         && chown -R superset:superset * \

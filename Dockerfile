@@ -39,7 +39,6 @@ COPY superset-frontend/package.json /app/superset-frontend/
 ## Install the pyocient sqlalchemy bindings
 ## TODO publish package to pypi
 COPY ./xgsrc/sqlalchemy_ocient /app/sqlalchemy_ocient
-COPY ./xgsrc/pyocient /app/pyocient
 
 ## Install the Ocient database engine
 ## TODO commit the engine to the superset repo
@@ -120,7 +119,6 @@ COPY superset /app/superset
 ## Install the pyocient sqlalchemy bindings
 ## TODO publish package to pypi
 COPY --from=superset-py /app/sqlalchemy_ocient /app/sqlalchemy_ocient
-COPY --from=superset-py /app/pyocient /app/pyocient
 
 ## Install the Ocient database engine
 ## TODO commit the engine to the superset repo
